@@ -180,11 +180,13 @@
             padding: 10px;
             border: none;
             border-radius: 5px;
+            
         }
 
         #add-poll-form input {
             background: #2e2e2e;
             color: white;
+            margin:10px;
         }
 
         #add-poll-form button {
@@ -270,15 +272,18 @@
         <div id="polls-container"></div>
         <button id="add-poll">+</button>
     </div>
-    <div id="add-poll-form"style="width:100%;height:100%;position:absolute;">
-        <h2>Add Poll</h2>
-        <form id="poll-form">
-            <input type="text" id="poll-question" placeholder="Poll Question" required />
-            <input type="text" id="poll-option1" placeholder="Option 1" required />
-            <input type="text" id="poll-option2" placeholder="Option 2" required />
-            <button type="submit">Publish Poll</button>
-        </form>
-    </div>
+    <div id="add-poll-form" style="width:100%; height:100%; position:absolute;">
+    <h2>Add Poll</h2>
+    <form id="poll-form">
+        <input type="text" id="poll-question" placeholder="Poll Question" required />
+        <div id="poll-options">
+            <input type="text" class="poll-option" placeholder="Option 1" required />
+            <input type="text" class="poll-option" placeholder="Option 2" required />
+        </div>
+        <button type="button" id="add-option">Add More Options</button>
+        <button type="submit">Publish Poll</button>
+    </form>
+</div>
     <script>
         window.onload = () => {
             const firebaseConfig = {
@@ -337,94 +342,106 @@ setTimeout(() => {
             });
 
             const addPollForm = document.getElementById("add-poll-form");
-            const pollForm = document.getElementById("poll-form");
-            const addPollButton = document.getElementById("add-poll");
+const pollForm = document.getElementById("poll-form");
+const addPollButton = document.getElementById("add-poll");
+const addOptionButton = document.getElementById("add-option");
 
-            addPollButton.addEventListener("click", () => {
-                addPollForm.style.display = "block";
-            });
+addPollButton.addEventListener("click", () => {
+    addPollForm.style.display = "block";
+});
 
-            pollForm.addEventListener("submit", (e) => {
-                e.preventDefault();
-                const question = document.getElementById("poll-question").value;
-                const option1 = document.getElementById("poll-option1").value;
-                const option2 = document.getElementById("poll-option2").value;
+addOptionButton.addEventListener("click", () => {
+    const optionsContainer = document.getElementById("poll-options");
+    const newOption = document.createElement("input");
+    newOption.type = "text";
+    newOption.className = "poll-option";
+    newOption.placeholder = `Option ${optionsContainer.children.length + 1}`;
+    optionsContainer.appendChild(newOption);
+});
 
-                pollsRef.push({
-                    creator: currentUser,
-                    question,
-                    options: [
-                        { text: option1, votes: 0 },
-                        { text: option2, votes: 0 }
-                    ],
-                    voters: {},
-                    timestamp: Date.now()
+pollForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const question = document.getElementById("poll-question").value;
+
+    const options = [];
+    const optionElements = document.querySelectorAll(".poll-option");
+    optionElements.forEach((optionElement) => {
+        const optionText = optionElement.value;
+        if (optionText) {
+            options.push({ text: optionText, votes: 0 });
+        }
+    });
+
+    pollsRef.push({
+        creator: currentUser,
+        question,
+        options,
+        voters: {},
+        timestamp: Date.now()
+    });
+
+    alert("Poll published!");
+    addPollForm.style.display = "none";
+    loadPolls();
+});
+
+const pollsContainer = document.getElementById("polls-container");
+
+function loadPolls() {
+    pollsRef.orderByChild("timestamp").once("value", (snapshot) => {
+        pollsContainer.innerHTML = "";
+        const polls = [];
+        snapshot.forEach((pollSnapshot) => {
+            const poll = pollSnapshot.val();
+            poll.key = pollSnapshot.key;
+            polls.push(poll);
+        });
+
+        polls.reverse().forEach((poll) => displayPoll(poll));
+    });
+}
+
+function displayPoll(poll) {
+    const pollDiv = document.createElement("div");
+    pollDiv.className = "poll";
+
+    const pollHeading = document.createElement("h3");
+    pollHeading.textContent = poll.question;
+    pollDiv.appendChild(pollHeading);
+
+    let totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+
+    poll.options.forEach((option, index) => {
+        const optionButton = document.createElement("button");
+        optionButton.className = "option";
+        const percentage = totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100);
+        optionButton.textContent = `${option.text} (${option.votes} votes, ${percentage}%)`;
+
+        if (poll.voters && poll.voters[currentUser]) {
+            optionButton.classList.add("disabled");
+        } else {
+            optionButton.addEventListener("click", () => {
+                if (!poll.voters) poll.voters = {};
+                poll.voters[currentUser] = true;
+
+                pollsRef.child(poll.key).update({
+                    [`options/${index}/votes`]: option.votes + 1,
+                    voters: poll.voters
                 });
-
-                alert("Poll published!");
-                addPollForm.style.display = "none";
                 loadPolls();
             });
+        }
 
-            
-            const pollsContainer = document.getElementById("polls-container");
+        pollDiv.appendChild(optionButton);
+    });
 
-            function loadPolls() {
-                pollsRef.orderByChild("timestamp").once("value", (snapshot) => {
-                    pollsContainer.innerHTML = "";
-                    const polls = [];
-                    snapshot.forEach((pollSnapshot) => {
-                        const poll = pollSnapshot.val();
-                        poll.key = pollSnapshot.key;
-                        polls.push(poll);
-                    });
+    const creatorText = document.createElement("p");
+    creatorText.className = "username";
+    creatorText.textContent = `Created by: ${poll.creator}`;
+    pollDiv.appendChild(creatorText);
 
-                    
-                    polls.reverse().forEach((poll) => displayPoll(poll));
-                });
-            }
-
-            function displayPoll(poll) {
-                const pollDiv = document.createElement("div");
-                pollDiv.className = "poll";
-
-                const pollHeading = document.createElement("h3");
-                pollHeading.textContent = poll.question;
-                pollDiv.appendChild(pollHeading);
-
-                let totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
-
-                poll.options.forEach((option, index) => {
-                    const optionButton = document.createElement("button");
-                    optionButton.className = "option";
-                    const percentage = totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100);
-                    optionButton.textContent = `${option.text} (${option.votes} votes, ${percentage}%)`;
-
-                    if (poll.voters && poll.voters[currentUser]) {
-                        optionButton.classList.add("disabled");
-                    } else {
-                        optionButton.addEventListener("click", () => {
-                            if (!poll.voters) poll.voters = {};
-                            poll.voters[currentUser] = true;
-
-                            pollsRef.child(poll.key).update({
-                                [`options/${index}/votes`]: option.votes + 1,
-                                voters: poll.voters
-                            });
-                            loadPolls();
-                        });
-                    }
-
-                    pollDiv.appendChild(optionButton);
-                });
-
-                const creatorText = document.createElement("p");
-                creatorText.className = "username";
-                creatorText.textContent = `Created by: ${poll.creator}`;
-                pollDiv.appendChild(creatorText);
-
-                pollsContainer.appendChild(pollDiv);
-            }
+    pollsContainer.appendChild(pollDiv);
+}
 
             const searchBar = document.getElementById("search-bar");
             searchBar.addEventListener("input", (e) => {
@@ -438,4 +455,4 @@ setTimeout(() => {
         };
     </script>
 </body>
-  </html>
+</html>
