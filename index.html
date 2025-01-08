@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PollIt</title>
+    <script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-database.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Nunito' rel='stylesheet'>
+    <style>
+    * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            outline:none;
+            font-family: 'Nunito';
+        }
+
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        
+        #auth {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #auth form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #auth h2 {
+            text-align: center;
+        }
+
+        #auth input {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #2e2e2e;
+            color: white;
+        }
+
+        #auth button {
+            background: #ff5722;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #auth button:hover {
+            background: #e64a19;
+        }
+
+        /* Homepage */
+        #homepage {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+        }
+
+        #search-bar {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #2e2e2e;
+            color: white;
+            width: 100%;
+        }
+
+        #polls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .poll {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .poll h3 {
+            margin-bottom: 10px;
+        }
+
+        .poll .option {
+            background: #2e2e2e;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .poll .option.disabled {
+            cursor: not-allowed;
+            background: #444;
+        }
+
+        .poll .username {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #999;
+        }
+
+        #add-poll {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff5722;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #add-poll:hover {
+            background: #e64a19;
+        }
+
+        /* Add Poll Form */
+        #add-poll-form {
+            display: none;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            
+        }
+
+        #add-poll-form form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #add-poll-form input,
+        #add-poll-form button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #add-poll-form input {
+            background: #2e2e2e;
+            color: white;
+        }
+
+        #add-poll-form button {
+            background: #ff5722;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #add-poll-form button:hover {
+            background: #e64a19;
+        }
+    .load{
+        width:100%;
+        height:100%;
+        position:absolute;
+        background:#121212;
+        z-index:10;
+        text-align:center;
+    }
+        .loader {
+  width: 60px;
+  aspect-ratio: 2;
+  --_g: no-repeat radial-gradient(farthest-side,white 90%,white);
+  background: 
+    var(--_g) 0    50%,
+    var(--_g) 50%  50%,
+    var(--_g) 50%  50%,
+    var(--_g) 100% 50%;
+  background-size: 25% 50%;
+  animation: l12 1s infinite linear;
+  position:absolute;
+  left:42%;
+  top:45%;
+}
+@keyframes l12 {
+    33%  {background-position:0   0  ,50% 100%,50%  100%,100% 0}
+    66%  {background-position:50% 0  ,0   100%,100% 100%,50%  0}
+    100% {background-position:50% 50%,0   50% ,100% 50% ,50%  50%}
+}
+#txt{
+    top:330px;
+    position:relative;
+}
+.welcome{
+        width:100%;
+        height:100%;
+        position:absolute;
+        background:#121212;
+        z-index:10;
+        text-align:center;
+        display:none;
+    }
+    #txt2{
+        top:280px;
+        position:relative;
+    }
+    </style>
+</head>
+<body>
+    <div class="load">
+<div class="loader"></div>
+<h1 id="txt">Poll It !</h1>
+</div>
+
+<div class="welcome">
+   <h1 id="txt2">Welcome!</h1>
+</div>
+
+    <div id="auth">
+        <form id="auth-form">
+            <h2>Login or Sign Up</h2>
+            <input type="text" id="username" placeholder="Username" required />
+            <input type="password" id="password" placeholder="Password" required />
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+    <div id="homepage">
+        <header>
+            <h1>Poll It</h1>
+        </header>
+        <input type="text" id="search-bar" placeholder="Search polls..." />
+        <div id="polls-container"></div>
+        <button id="add-poll">+</button>
+    </div>
+    <div id="add-poll-form"style="width:100%;height:100%;position:absolute;">
+        <h2>Add Poll</h2>
+        <form id="poll-form">
+            <input type="text" id="poll-question" placeholder="Poll Question" required />
+            <input type="text" id="poll-option1" placeholder="Option 1" required />
+            <input type="text" id="poll-option2" placeholder="Option 2" required />
+            <button type="submit">Publish Poll</button>
+        </form>
+    </div>
+    <script>
+        window.onload = () => {
+            const firebaseConfig = {
+                apiKey: "AIzaSyCDLU2OR4N9JhMvAryJuZLU-7yqM_6hfN8",
+                authDomain: "fitness-a289e.firebaseapp.com",
+                projectId: "fitness-a289e",
+                storageBucket: "fitness-a289e.appspot.com",
+                messagingSenderId: "28074375190",
+                appId: "1:28074375190:web:be165635eb8a37812fdd37",
+                measurementId: "G-1HQF7LE7WN"
+            };
+setTimeout(() => {
+  document.querySelector(".load").style.display="none"
+}, "5000");
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.database();
+            const usersRef = db.ref("users");
+            const pollsRef = db.ref("polls");
+
+            let currentUser = null;
+
+            const authForm = document.getElementById("auth-form");
+            const usernameInput = document.getElementById("username");
+            const passwordInput = document.getElementById("password");
+            const authDiv = document.getElementById("auth");
+            const homepageDiv = document.getElementById("homepage");
+
+            authForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+
+                usersRef.child(username).once("value", (snapshot) => {
+                    if (snapshot.exists()) {
+                        if (snapshot.val().password === password) {
+                            currentUser = username;
+                            document.querySelector(".welcome").style.display="block"
+               setTimeout(() => {
+  document.querySelector(".welcome").style.display="none"
+  homepageDiv.style.display = "flex";
+}, "3000");             authDiv.style.display = "none";
+                            
+                            loadPolls();
+                        } else {
+                            alert("Invalid password.");
+                        }
+                    } else {
+                        usersRef.child(username).set({ password });
+                        currentUser = username;
+                        alert("Account created!");
+                        authDiv.style.display = "none";
+                        homepageDiv.style.display = "flex";
+                        loadPolls();
+                    }
+                });
+            });
+
+            const addPollForm = document.getElementById("add-poll-form");
+            const pollForm = document.getElementById("poll-form");
+            const addPollButton = document.getElementById("add-poll");
+
+            addPollButton.addEventListener("click", () => {
+                addPollForm.style.display = "block";
+            });
+
+            pollForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const question = document.getElementById("poll-question").value;
+                const option1 = document.getElementById("poll-option1").value;
+                const option2 = document.getElementById("poll-option2").value;
+
+                pollsRef.push({
+                    creator: currentUser,
+                    question,
+                    options: [
+                        { text: option1, votes: 0 },
+                        { text: option2, votes: 0 }
+                    ],
+                    voters: {},
+                    timestamp: Date.now()
+                });
+
+                alert("Poll published!");
+                addPollForm.style.display = "none";
+                loadPolls();
+            });
+
+            
+            const pollsContainer = document.getElementById("polls-container");
+
+            function loadPolls() {
+                pollsRef.orderByChild("timestamp").once("value", (snapshot) => {
+                    pollsContainer.innerHTML = "";
+                    const polls = [];
+                    snapshot.forEach((pollSnapshot) => {
+                        const poll = pollSnapshot.val();
+                        poll.key = pollSnapshot.key;
+                        polls.push(poll);
+                    });
+
+                    
+                    polls.reverse().forEach((poll) => displayPoll(poll));
+                });
+            }
+
+            function displayPoll(poll) {
+                const pollDiv = document.createElement("div");
+                pollDiv.className = "poll";
+
+                const pollHeading = document.createElement("h3");
+                pollHeading.textContent = poll.question;
+                pollDiv.appendChild(pollHeading);
+
+                let totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+
+                poll.options.forEach((option, index) => {
+                    const optionButton = document.createElement("button");
+                    optionButton.className = "option";
+                    const percentage = totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100);
+                    optionButton.textContent = `${option.text} (${option.votes} votes, ${percentage}%)`;
+
+                    if (poll.voters && poll.voters[currentUser]) {
+                        optionButton.classList.add("disabled");
+                    } else {
+                        optionButton.addEventListener("click", () => {
+                            if (!poll.voters) poll.voters = {};
+                            poll.voters[currentUser] = true;
+
+                            pollsRef.child(poll.key).update({
+                                [`options/${index}/votes`]: option.votes + 1,
+                                voters: poll.voters
+                            });
+                            loadPolls();
+                        });
+                    }
+
+                    pollDiv.appendChild(optionButton);
+                });
+
+                const creatorText = document.createElement("p");
+                creatorText.className = "username";
+                creatorText.textContent = `Created by: ${poll.creator}`;
+                pollDiv.appendChild(creatorText);
+
+                pollsContainer.appendChild(pollDiv);
+            }
+
+            const searchBar = document.getElementById("search-bar");
+            searchBar.addEventListener("input", (e) => {
+                const query = e.target.value.toLowerCase();
+                document.querySelectorAll(".poll").forEach((pollDiv) => {
+                    pollDiv.style.display = pollDiv.textContent.toLowerCase().includes(query)
+                        ? "block"
+                        : "none";
+                });
+            });
+        };
+    </script>
+</body>
+  </html>
